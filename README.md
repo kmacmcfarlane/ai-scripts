@@ -1,5 +1,5 @@
-# llm-scripts
-llm-scripts includes a collection of scripts for interacting with AI locally.
+# ai-scripts
+ai-scripts includes a collection of scripts for interacting with AI locally.
 
 ## Prerequisites
 - Python 3.8+
