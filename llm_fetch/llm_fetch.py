@@ -9,7 +9,7 @@ import yaml
 def clone_repository(repo_url, output_dir):
     """Clone a repository to a specified directory."""
     if not os.path.exists(output_dir):
-        command = ["git", "clone", repo_url, output_dir]
+        command = ["git", "clone", "--progress", repo_url, output_dir]
         subprocess.run(command, check=True)
 
 def convert_to_gguf(output_dir, reponame):
