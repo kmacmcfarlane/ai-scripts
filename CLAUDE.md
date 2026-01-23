@@ -20,6 +20,7 @@ ai-scripts is a collection of independent Python CLI utilities for AI-related ta
 | `llm_fetch/` | Clone HuggingFace models, convert to GGUF, optionally quantize (requires llama.cpp) |
 | `token_count/` | Count tokens using HuggingFace tokenizers |
 | `token_embedding_search/` | Find semantically similar tokens using model embeddings (cosine similarity) |
+| `generate_rare_token/` | Find rare single-token candidates by distance from a common-token centroid |
 
 ## Running Tools
 
@@ -30,6 +31,7 @@ caption_util.sh combine|split|rename [options]
 llm_fetch.sh <repo-url> [--quant_type Q4_K_M] [--model_dir /path]
 token_count.sh --model "model-id" "text"
 token_embedding_search.sh --model "model-id" "text"
+generate_rare_token.sh --model "model-id" -n 50
 ```
 
 Or directly via Python:
@@ -39,6 +41,7 @@ python caption_util/caption_util.py combine|split|rename [options]
 python llm_fetch/llm_fetch.py <repo-url> [options]
 python token_count/token_count.py --model "model-id" "text"
 python token_embedding_search/token_embedding_search.py --model "model-id" "text"
+python generate_rare_token/generate_rare_token.py --model "model-id" -n 50
 ```
 
 ## Dependencies
