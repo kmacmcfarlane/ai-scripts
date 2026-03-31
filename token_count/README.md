@@ -13,7 +13,7 @@ This tool is intended to be run via the `token_count.sh` wrapper (from your `PAT
 
 Count tokens for a string:
 ```bash
-token_count.sh --model "Qwen/Qwen2.5-7B-Instruct" "Hello world!"
+token_count --model "Qwen/Qwen2.5-7B-Instruct" "Hello world!"
 ```
 
 ### Model argument
@@ -26,7 +26,7 @@ token_count.sh --model "Qwen/Qwen2.5-7B-Instruct" "Hello world!"
 Example with a local path:
 
 ```shell
-token_count.sh --model "./models/my-tokenizer" "Some text to measure"
+token_count --model "./models/my-tokenizer" "Some text to measure"
 ```
 
 ## Arguments

@@ -13,12 +13,12 @@ This tool is intended to be run via the `token_embedding_search.sh` wrapper (fro
 
 Find nearest tokens for a string:
 ```bash
-token_embedding_search.sh "hello"
+token_embedding_search "hello"
 ```
 
 Specify a custom model or return more results with `--model` and `-k`:
 ```bash
-token_embedding_search.sh --model "Qwen/Qwen2.5-VL-7B-Instruct" -k 50 "hello"
+token_embedding_search --model "Qwen/Qwen2.5-VL-7B-Instruct" -k 50 "hello"
 ```
 
 ### Model argument

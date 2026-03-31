@@ -61,13 +61,18 @@ def read_config():
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Fetch and quantize a model.")
+    parser = argparse.ArgumentParser(
+        description="Fetch and quantize a model.",
+        epilog="Model directory priority: --model_dir flag > ModelDir in llm_fetch.config.yaml > ~/.ai-scripts/llm_fetch/models. "
+               "Models are stored as <model_dir>/<username>/<reponame>/. "
+               "Copy llm_fetch.example.yaml to llm_fetch.config.yaml to configure."
+    )
     parser.add_argument("repo_url", help="URL of the Hugging Face repository.")
     parser.add_argument(
         "--quant_type", nargs="?", default=None, help="Quantization type (optional)."
     )
     parser.add_argument(
-        "--model_dir", help="Directory to store models (optional)."
+        "--model_dir", help="Directory to store models. Overrides ModelDir from llm_fetch.config.yaml. Default: ~/.ai-scripts/llm_fetch/models"
     )
     args = parser.parse_args()
 
@@ -84,9 +89,10 @@ def main():
     reponame = repo_url.split("/")[-1]
 
     # Set output directory
-    base_dir = args.model_dir or config.get('ModelDir', os.path.join(os.path.expanduser("~"), "llm_models"))
+    default_dir = os.path.join(os.path.expanduser("~"), ".ai-scripts", "llm_fetch", "models")
+    base_dir = args.model_dir or config.get('ModelDir', default_dir)
     base_dir = os.path.expanduser(base_dir)
-    os.makedirs(os.path.dirname(base_dir), exist_ok=True)
+    os.makedirs(base_dir, exist_ok=True)
     print(f"Model Base Directory: {base_dir}")
 
 

@@ -17,7 +17,7 @@ ai-scripts is a collection of independent Python CLI utilities for AI-related ta
 | Directory | Purpose |
 |-----------|---------|
 | `caption_util/` | Combine/split caption files for batch editing; rename files by extension |
-| `llm_fetch/` | Clone HuggingFace models, convert to GGUF, optionally quantize (requires llama.cpp) |
+| `llm_fetch/` | Clone HuggingFace models, convert to GGUF, optionally quantize (requires llama.cpp); model directory configured via `llm_fetch.config.yaml` |
 | `token_count/` | Count tokens using HuggingFace tokenizers |
 | `token_embedding_search/` | Find semantically similar tokens using model embeddings (cosine similarity) |
 | `generate_rare_token/` | Find rare single-token candidates by distance from a common-token centroid |
@@ -27,11 +27,11 @@ ai-scripts is a collection of independent Python CLI utilities for AI-related ta
 Tools are invoked via their shell wrappers (requires `bin/` on PATH):
 
 ```bash
-caption_util.sh combine|split|rename [options]
-llm_fetch.sh <repo-url> [--quant_type Q4_K_M] [--model_dir /path]
-token_count.sh --model "model-id" "text"
-token_embedding_search.sh --model "model-id" "text"
-generate_rare_token.sh --model "model-id" -n 50
+caption_util combine|split|rename [options]
+llm_fetch <repo-url> [--quant_type Q4_K_M] [--model_dir /path]
+token_count --model "model-id" "text"
+token_embedding_search --model "model-id" "text"
+generate_rare_token --model "model-id" -n 50
 ```
 
 Or directly via Python:
@@ -69,3 +69,7 @@ No build step, test framework, or linter is configured. Tools are run directly a
 1. Create a directory with the tool's Python script
 2. Add a shell wrapper in `bin/` following the existing pattern
 3. If the tool has pip dependencies, add a `requirements.txt` and use venv management in the wrapper (see `bin/token_count.sh` for reference)
+
+## Committing
+
+Do not include "co-authored by claude" messages when committing code

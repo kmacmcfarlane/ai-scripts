@@ -17,12 +17,12 @@ This tool is intended to be run via the `generate_rare_token.sh` wrapper (from y
 
 Find rare tokens with the default model:
 ```bash
-generate_rare_token.sh
+generate_rare_token
 ```
 
 Specify a custom model or number of results:
 ```bash
-generate_rare_token.sh --model "Qwen/Qwen2.5-VL-7B-Instruct" -n 100
+generate_rare_token --model "Qwen/Qwen2.5-VL-7B-Instruct" -n 100
 ```
 
 ### Model argument
