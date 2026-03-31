@@ -1,3 +1,4 @@
 .idea
-.venv
+.venv/
+.requirements.sha256
 llm_fetch.config.yaml
