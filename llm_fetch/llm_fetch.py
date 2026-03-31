@@ -134,8 +134,9 @@ def main():
     quant_type = args.quant_type
     config = read_config()
 
-    if config.get('Version') > "0.1":
-        print("Configuration file is unsupported by this script. config version: ", config.get('Version'), ", script version: 0.1")
+    config_version = config.get('Version')
+    if config_version is not None and str(config_version) > "0.1":
+        print(f"Configuration file version {config_version} is not supported by this script (max 0.1).", file=sys.stderr)
         sys.exit(1)
 
     # Extract repository information from URL

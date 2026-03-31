@@ -1,3 +1,4 @@
+Version: "0.1"
 ModelDir: ~/.ai-scripts/llm_fetch/models
 # LlamaCppDir: ~/path/to/llama.cpp # otherwise convert_hf_to_gguf.py and llama-quantize need to be in the path
 # LlamaCppVirtualEnv: ~/path/to/llama.cpp/.venv
