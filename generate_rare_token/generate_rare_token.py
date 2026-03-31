@@ -1,7 +1,7 @@
 import argparse
 import re
 import torch
-from transformers import AutoTokenizer, AutoModel
+from transformers import Qwen2TokenizerFast, AutoModel
 
 COMMON_STRINGS = [
     "the", "a", "an", "and", "of", "to", "in", "on", "for", "with", "at", "by", "from",
@@ -67,11 +67,15 @@ def main():
     )
     parser.add_argument("--model", default="Qwen/Qwen2.5-VL-7B-Instruct",
                         help="Pretrained model name or local path (default: Qwen/Qwen2.5-VL-7B-Instruct)")
+    parser.add_argument("--model-tokenizer", default="Qwen/Qwen-Image",
+                        help="Pretrained model name or local path (default: Qwen/Qwen-Image)")
+    parser.add_argument("--model-tokenizer-subfolder", default="tokenizer",
+                        help="Subfolder within `model` path to load the tokenizer from (default: tokenizer)")
     parser.add_argument("-n", type=int, default=50,
                         help="Number of rare tokens to return (default: 50)")
     args = parser.parse_args()
 
-    tok = AutoTokenizer.from_pretrained(args.model, trust_remote_code=True)
+    tok = Qwen2TokenizerFast.from_pretrained(args.model_tokenizer, subfolder=args.model_tokenizer_subfolder)
     model = AutoModel.from_pretrained(args.model, trust_remote_code=True, device_map="cpu")
     E = model.get_input_embeddings().weight.detach().float()
 
