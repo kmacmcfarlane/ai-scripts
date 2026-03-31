@@ -12,13 +12,67 @@ def clone_repository(repo_url, output_dir):
         command = ["git", "clone", "--progress", repo_url, output_dir]
         subprocess.run(command, check=True)
 
-def convert_to_gguf(output_dir, reponame):
+def find_llama_cpp_venv(llama_cpp_dir, venv_override):
+    """Find the venv directory for llama.cpp.
+
+    Checks LlamaCppVirtualEnv override first, then .venv/ and venv/ in llama_cpp_dir.
+    Returns the path if found, None otherwise.
+    """
+    if venv_override:
+        venv_override = os.path.expanduser(venv_override)
+        if os.path.isdir(venv_override):
+            return venv_override
+        print(f"Warning: LlamaCppVirtualEnv does not exist: {venv_override}", file=sys.stderr)
+        return None
+
+    for candidate in [".venv", "venv"]:
+        venv_dir = os.path.join(llama_cpp_dir, candidate)
+        if os.path.isdir(venv_dir):
+            return venv_dir
+    return None
+
+
+def setup_llama_cpp_env(llama_cpp_dir, venv_override=None):
+    """Set up environment for llama.cpp tools.
+
+    If llama_cpp_dir is provided, adds it to PATH and activates its venv
+    if one exists and VIRTUAL_ENV isn't already set. If not provided, assumes
+    tools are available in PATH.
+    """
+    if not llama_cpp_dir:
+        return
+
+    llama_cpp_dir = os.path.expanduser(llama_cpp_dir)
+    if not os.path.isdir(llama_cpp_dir):
+        print(f"Warning: LlamaCppDir does not exist: {llama_cpp_dir}", file=sys.stderr)
+        return
+
+    # Add llama.cpp dir to PATH so llama-quantize can be found
+    os.environ["PATH"] = f"{llama_cpp_dir}:{os.environ['PATH']}"
+
+    # Activate venv if no venv is already active
+    if not os.environ.get("VIRTUAL_ENV"):
+        venv_dir = find_llama_cpp_venv(llama_cpp_dir, venv_override)
+        if venv_dir:
+            os.environ["VIRTUAL_ENV"] = venv_dir
+            os.environ["PATH"] = f"{os.path.join(venv_dir, 'bin')}:{os.environ['PATH']}"
+            print(f"Activated venv: {venv_dir}")
+
+
+def get_convert_script(llama_cpp_dir):
+    """Return the path to convert_hf_to_gguf.py."""
+    if llama_cpp_dir:
+        return os.path.join(os.path.expanduser(llama_cpp_dir), "convert_hf_to_gguf.py")
+    return "convert_hf_to_gguf.py"
+
+
+def convert_to_gguf(output_dir, reponame, convert_script):
     """Convert a model to gguf format."""
     outfile = os.path.join(output_dir, f"{reponame}-bf16.gguf")
     if not os.path.exists(outfile):
         command = [
             "python",
-            "/home/rt/ai/repos/llama.cpp/convert_hf_to_gguf.py",
+            convert_script,
             "--outfile",
             outfile,
             "--outtype",
@@ -99,16 +153,18 @@ def main():
     output_dir = os.path.join(base_dir, git_username, reponame)
     print(f"Output Directory: {output_dir}")
 
+    # Set up llama.cpp environment
+    llama_cpp_dir = config.get('LlamaCppDir')
+    llama_cpp_venv = config.get('LlamaCppVirtualEnv')
+    setup_llama_cpp_env(llama_cpp_dir, llama_cpp_venv)
+    convert_script = get_convert_script(llama_cpp_dir)
+
     # Clone repository if it doesn't exist
     if not os.path.exists(output_dir):
         clone_repository(repo_url, output_dir)
 
-    # Activate the virtual environment
-    os.environ["VIRTUAL_ENV"] = "/home/rt/ai/repos/llama.cpp/venv"
-    os.environ["PATH"] = f"/home/rt/ai/repos/llama.cpp/venv/bin:{os.environ['PATH']}"
-
     # Convert to gguf
-    convert_to_gguf(output_dir, reponame)
+    convert_to_gguf(output_dir, reponame, convert_script)
 
     # Quantize if quantization type is provided
     if quant_type:

@@ -49,7 +49,7 @@ python generate_rare_token/generate_rare_token.py --model "model-id" -n 50
 - Python 3.8+
 - Per-tool dependencies managed independently (e.g., `token_count/requirements.txt`)
 - `token_count.sh` auto-creates and manages a `.venv` with hash-based dependency tracking
-- `llm_fetch` requires external llama.cpp tools (convert script and llama-quantize binary)
+- `llm_fetch` requires llama.cpp tools; set `LlamaCppDir` in config or ensure tools are in PATH
 
 ## Build / Test / Lint
 
