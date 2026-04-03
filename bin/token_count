@@ -34,4 +34,4 @@ if [[ ! -f "$REQ_HASH_FILE" ]] || [[ "$(cat "$REQ_HASH_FILE")" != "$REQ_HASH" ]]
 fi
 
 # Launch the python script with all arguments
-python3 "$DIR/../token_count/token_count.py" "$@"
+"$VENV_PY" "$PY_SCRIPT" "$@"
