@@ -1,16 +1,67 @@
 import argparse
+import glob
 import os
 import subprocess
 import sys
+from urllib.parse import urlparse
 
 import yaml
+from huggingface_hub import snapshot_download
 
 
-def clone_repository(repo_url, output_dir):
-    """Clone a repository to a specified directory."""
-    if not os.path.exists(output_dir):
-        command = ["git", "clone", "--progress", repo_url, output_dir]
-        subprocess.run(command, check=True)
+def parse_hf_url(url):
+    """Parse a Hugging Face URL into repo_id and optional subdir.
+
+    Supports formats:
+        https://huggingface.co/user/repo
+        https://huggingface.co/user/repo/tree/main/subdir
+        user/repo
+    """
+    # Handle bare repo_id (no URL scheme)
+    if not url.startswith("http"):
+        parts = url.strip("/").split("/")
+        if len(parts) == 2:
+            return url, None
+        if len(parts) > 2:
+            return "/".join(parts[:2]), "/".join(parts[2:])
+        raise ValueError(f"Cannot parse repo identifier: {url}")
+
+    parsed = urlparse(url)
+    path_parts = [p for p in parsed.path.strip("/").split("/") if p]
+
+    if len(path_parts) < 2:
+        raise ValueError(f"Cannot extract repo_id from URL: {url}")
+
+    repo_id = f"{path_parts[0]}/{path_parts[1]}"
+
+    # Detect /tree/<ref>/<subdir> pattern
+    subdir = None
+    if len(path_parts) > 3 and path_parts[2] == "tree":
+        # path_parts[3] is the ref (e.g. "main"), rest is subdir
+        subdir_parts = path_parts[4:]
+        if subdir_parts:
+            subdir = "/".join(subdir_parts)
+
+    return repo_id, subdir
+
+
+def download_repo(repo_id, output_dir, subdir=None):
+    """Download a HuggingFace repo (or subdirectory) using snapshot_download."""
+    kwargs = {
+        "repo_id": repo_id,
+        "local_dir": output_dir,
+    }
+    if subdir:
+        kwargs["allow_patterns"] = f"{subdir}/**"
+
+    print(f"Downloading {repo_id}" + (f" (subdir: {subdir})" if subdir else ""))
+    snapshot_download(**kwargs)
+
+
+def has_gguf_files(directory):
+    """Check if directory contains any .gguf files."""
+    return bool(glob.glob(os.path.join(directory, "**", "*.gguf"), recursive=True))
+
 
 def find_llama_cpp_venv(llama_cpp_dir, venv_override):
     """Find the venv directory for llama.cpp.
@@ -121,17 +172,19 @@ def main():
                "Models are stored as <model_dir>/<username>/<reponame>/. "
                "Copy llm_fetch.example.yaml to llm_fetch.config.yaml to configure."
     )
-    parser.add_argument("repo_url", help="URL of the Hugging Face repository.")
+    parser.add_argument("repo_url", help="URL of the Hugging Face repository (may include /tree/main/<subdir> path).")
     parser.add_argument(
         "--quant_type", nargs="?", default=None, help="Quantization type (optional)."
     )
     parser.add_argument(
         "--model_dir", help="Directory to store models. Overrides ModelDir from llm_fetch.config.yaml. Default: ~/.ai-scripts/llm_fetch/models"
     )
+    parser.add_argument(
+        "--skip-convert", action="store_true", default=False,
+        help="Skip GGUF conversion. Auto-enabled when downloaded files are already in GGUF format."
+    )
     args = parser.parse_args()
 
-    repo_url = args.repo_url
-    quant_type = args.quant_type
     config = read_config()
 
     config_version = config.get('Version')
@@ -139,9 +192,9 @@ def main():
         print(f"Configuration file version {config_version} is not supported by this script (max 0.1).", file=sys.stderr)
         sys.exit(1)
 
-    # Extract repository information from URL
-    git_username = repo_url.split("/")[-2]
-    reponame = repo_url.split("/")[-1]
+    # Parse the URL to get repo_id and optional subdir
+    repo_id, subdir = parse_hf_url(args.repo_url)
+    username, reponame = repo_id.split("/")
 
     # Set output directory
     default_dir = os.path.join(os.path.expanduser("~"), ".ai-scripts", "llm_fetch", "models")
@@ -150,9 +203,21 @@ def main():
     os.makedirs(base_dir, exist_ok=True)
     print(f"Model Base Directory: {base_dir}")
 
-
-    output_dir = os.path.join(base_dir, git_username, reponame)
+    output_dir = os.path.join(base_dir, username, reponame)
     print(f"Output Directory: {output_dir}")
+
+    # Download repository (or subdirectory)
+    download_repo(repo_id, output_dir, subdir=subdir)
+
+    # Determine the effective working directory for conversion
+    # When a subdir is fetched, it lives under output_dir/subdir
+    effective_dir = os.path.join(output_dir, subdir) if subdir else output_dir
+
+    # Auto-detect GGUF: skip conversion if files are already in GGUF format
+    skip_convert = args.skip_convert
+    if not skip_convert and has_gguf_files(effective_dir):
+        print("Detected existing GGUF files, skipping conversion.")
+        skip_convert = True
 
     # Set up llama.cpp environment
     llama_cpp_dir = config.get('LlamaCppDir')
@@ -160,17 +225,12 @@ def main():
     setup_llama_cpp_env(llama_cpp_dir, llama_cpp_venv)
     convert_script = get_convert_script(llama_cpp_dir)
 
-    # Clone repository if it doesn't exist
-    if not os.path.exists(output_dir):
-        clone_repository(repo_url, output_dir)
-
-    # Convert to gguf
-    convert_to_gguf(output_dir, reponame, convert_script)
+    if not skip_convert:
+        convert_to_gguf(effective_dir, reponame, convert_script)
 
     # Quantize if quantization type is provided
-    if quant_type:
-        quantize_model(output_dir, reponame, quant_type)
+    if quant_type := args.quant_type:
+        quantize_model(effective_dir, reponame, quant_type)
 
 if __name__ == "__main__":
     main()
-

@@ -1,0 +1,4 @@
+-r generate_rare_token/requirements.txt
+-r llm_fetch/requirements.txt
+-r token_count/requirements.txt
+-r token_embedding_search/requirements.txt
