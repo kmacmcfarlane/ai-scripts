@@ -17,7 +17,7 @@ ai-scripts is a collection of independent Python CLI utilities for AI-related ta
 | Directory | Purpose |
 |-----------|---------|
 | `caption_util/` | Combine/split caption files for batch editing; rename files by extension |
-| `llm_fetch/` | Clone HuggingFace models, convert to GGUF, optionally quantize (requires llama.cpp); model directory configured via `llm_fetch.config.yaml` |
+| `llm_fetch/` | Clone HuggingFace models (full repo, subdir, or single file), convert to GGUF, optionally quantize (requires llama.cpp); model directory configured via `llm_fetch.config.yaml` |
 | `token_count/` | Count tokens using HuggingFace tokenizers |
 | `token_embedding_search/` | Find semantically similar tokens using model embeddings (cosine similarity) |
 | `generate_rare_token/` | Find rare single-token candidates by distance from a common-token centroid |

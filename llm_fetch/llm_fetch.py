@@ -6,24 +6,29 @@ import sys
 from urllib.parse import urlparse
 
 import yaml
-from huggingface_hub import snapshot_download
+from huggingface_hub import hf_hub_download, snapshot_download
 
 
 def parse_hf_url(url):
-    """Parse a Hugging Face URL into repo_id and optional subdir.
+    """Parse a Hugging Face URL into repo_id, optional subdir, and optional filename.
 
     Supports formats:
         https://huggingface.co/user/repo
         https://huggingface.co/user/repo/tree/main/subdir
+        https://huggingface.co/user/repo/blob/main/path/to/file.gguf
         user/repo
+
+    Returns:
+        (repo_id, subdir, filename) where subdir and filename are mutually
+        exclusive (at most one is set).
     """
     # Handle bare repo_id (no URL scheme)
     if not url.startswith("http"):
         parts = url.strip("/").split("/")
         if len(parts) == 2:
-            return url, None
+            return url, None, None
         if len(parts) > 2:
-            return "/".join(parts[:2]), "/".join(parts[2:])
+            return "/".join(parts[:2]), "/".join(parts[2:]), None
         raise ValueError(f"Cannot parse repo identifier: {url}")
 
     parsed = urlparse(url)
@@ -34,6 +39,12 @@ def parse_hf_url(url):
 
     repo_id = f"{path_parts[0]}/{path_parts[1]}"
 
+    # Detect /blob/<ref>/<filepath> pattern (single file)
+    if len(path_parts) > 3 and path_parts[2] == "blob":
+        file_parts = path_parts[4:]
+        if file_parts:
+            return repo_id, None, "/".join(file_parts)
+
     # Detect /tree/<ref>/<subdir> pattern
     subdir = None
     if len(path_parts) > 3 and path_parts[2] == "tree":
@@ -42,7 +53,7 @@ def parse_hf_url(url):
         if subdir_parts:
             subdir = "/".join(subdir_parts)
 
-    return repo_id, subdir
+    return repo_id, subdir, None
 
 
 def download_repo(repo_id, output_dir, subdir=None):
@@ -56,6 +67,16 @@ def download_repo(repo_id, output_dir, subdir=None):
 
     print(f"Downloading {repo_id}" + (f" (subdir: {subdir})" if subdir else ""))
     snapshot_download(**kwargs)
+
+
+def download_file(repo_id, filename, output_dir):
+    """Download a single file from a HuggingFace repo using hf_hub_download."""
+    print(f"Downloading {repo_id}/{filename}")
+    hf_hub_download(
+        repo_id=repo_id,
+        filename=filename,
+        local_dir=output_dir,
+    )
 
 
 def has_gguf_files(directory):
@@ -172,7 +193,7 @@ def main():
                "Models are stored as <model_dir>/<username>/<reponame>/. "
                "Copy llm_fetch.example.yaml to llm_fetch.config.yaml to configure."
     )
-    parser.add_argument("repo_url", help="URL of the Hugging Face repository (may include /tree/main/<subdir> path).")
+    parser.add_argument("repo_url", help="URL of the Hugging Face repository. Supports /tree/main/<subdir> for subdirectories and /blob/main/<file> for single files.")
     parser.add_argument(
         "--quant_type", nargs="?", default=None, help="Quantization type (optional)."
     )
@@ -192,8 +213,8 @@ def main():
         print(f"Configuration file version {config_version} is not supported by this script (max 0.1).", file=sys.stderr)
         sys.exit(1)
 
-    # Parse the URL to get repo_id and optional subdir
-    repo_id, subdir = parse_hf_url(args.repo_url)
+    # Parse the URL to get repo_id and optional subdir or filename
+    repo_id, subdir, filename = parse_hf_url(args.repo_url)
     username, reponame = repo_id.split("/")
 
     # Set output directory
@@ -206,8 +227,11 @@ def main():
     output_dir = os.path.join(base_dir, username, reponame)
     print(f"Output Directory: {output_dir}")
 
-    # Download repository (or subdirectory)
-    download_repo(repo_id, output_dir, subdir=subdir)
+    # Download single file or full repository
+    if filename:
+        download_file(repo_id, filename, output_dir)
+    else:
+        download_repo(repo_id, output_dir, subdir=subdir)
 
     # Determine the effective working directory for conversion
     # When a subdir is fetched, it lives under output_dir/subdir
