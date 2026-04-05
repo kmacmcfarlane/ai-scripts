@@ -3,6 +3,7 @@ import glob
 import os
 import subprocess
 import sys
+from pathlib import PurePosixPath
 from urllib.parse import urlparse
 
 import yaml
@@ -16,44 +17,52 @@ def parse_hf_url(url):
         https://huggingface.co/user/repo
         https://huggingface.co/user/repo/tree/main/subdir
         https://huggingface.co/user/repo/blob/main/path/to/file.gguf
+        https://huggingface.co/user/repo/resolve/main/file.gguf?download=true
         user/repo
 
     Returns:
         (repo_id, subdir, filename) where subdir and filename are mutually
         exclusive (at most one is set).
     """
-    # Handle bare repo_id (no URL scheme)
-    if not url.startswith("http"):
-        parts = url.strip("/").split("/")
+    parsed = urlparse(url)
+
+    # Bare repo_id (no scheme) — treat as user/repo or user/repo/subdir
+    if not parsed.scheme:
+        path = PurePosixPath(url.strip("/"))
+        parts = path.parts
         if len(parts) == 2:
-            return url, None, None
+            return str(path), None, None
         if len(parts) > 2:
-            return "/".join(parts[:2]), "/".join(parts[2:]), None
+            return str(PurePosixPath(*parts[:2])), str(PurePosixPath(*parts[2:])), None
         raise ValueError(f"Cannot parse repo identifier: {url}")
 
-    parsed = urlparse(url)
-    path_parts = [p for p in parsed.path.strip("/").split("/") if p]
+    path = PurePosixPath(parsed.path.strip("/"))
+    parts = path.parts
 
-    if len(path_parts) < 2:
+    if len(parts) < 2:
         raise ValueError(f"Cannot extract repo_id from URL: {url}")
 
-    repo_id = f"{path_parts[0]}/{path_parts[1]}"
+    repo_id = str(PurePosixPath(*parts[:2]))
+    rest = parts[2:]
 
-    # Detect /blob/<ref>/<filepath> pattern (single file)
-    if len(path_parts) > 3 and path_parts[2] == "blob":
-        file_parts = path_parts[4:]
-        if file_parts:
-            return repo_id, None, "/".join(file_parts)
+    # No path type indicator — bare repo URL
+    if len(rest) < 2:
+        return repo_id, None, None
 
-    # Detect /tree/<ref>/<subdir> pattern
-    subdir = None
-    if len(path_parts) > 3 and path_parts[2] == "tree":
-        # path_parts[3] is the ref (e.g. "main"), rest is subdir
-        subdir_parts = path_parts[4:]
-        if subdir_parts:
-            subdir = "/".join(subdir_parts)
+    path_type, _ref, *remainder = rest
 
-    return repo_id, subdir, None
+    if not remainder:
+        return repo_id, None, None
+
+    tail = str(PurePosixPath(*remainder))
+
+    if path_type in ("blob", "resolve"):
+        return repo_id, None, tail
+
+    if path_type == "tree":
+        return repo_id, tail, None
+
+    return repo_id, None, None
 
 
 def download_repo(repo_id, output_dir, subdir=None):
