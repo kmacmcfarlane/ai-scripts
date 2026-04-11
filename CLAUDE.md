@@ -73,3 +73,18 @@ No build step, test framework, or linter is configured. Tools are run directly a
 ## Committing
 
 Do not include "co-authored by claude" messages when committing code
+
+## Plugin Sync
+
+This project has a companion Claude Code plugin at `gh:kmacmcfarlane/claude-plugins/plugins/ai-scripts`. The plugin provides project context as a skill so it's available across conversations and from other repos.
+
+**When to prompt for sync:** After making changes that affect any of the following, use AskUserQuestion to ask the user if they want to update the plugin:
+- Tool inventory (adding, removing, or renaming a tool)
+- Project conventions (CLI patterns, config format, venv management)
+- Architecture changes (wrapper pattern, directory structure)
+- Development workflow (adding tests, linter, build steps)
+
+**Sync process:**
+1. Update the skill files in `../claude-plugins/plugins/ai-scripts/skills/ai-scripts/` (SKILL.md, references/tools.md, references/development.md) to reflect the changes
+2. Commit and push in the claude-plugins repo
+3. Remind the user to run `/plugin update gh:kmacmcfarlane/claude-plugins/plugins/ai-scripts` to pull the updated plugin
